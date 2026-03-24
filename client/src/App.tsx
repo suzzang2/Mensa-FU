@@ -50,52 +50,30 @@ function App() {
   //   loadDummyData();
   // }, []);
   useEffect(() => {
-  const fetchRealMenu = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('http://localhost:4000/api/menu');
-      // &timestamp=${Date.now()} 를 붙이면 브라우저 캐시를 무시하고 새로 가져옵니다.
-      const json = await response.json();
-      const htmlString = json.contents; // 사이트의 전체 HTML 코드
-
-      // 3. HTML 문자열을 DOM 객체로 변환
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(htmlString, 'text/html');
-
-      // 4. 데이터 추출 (stw.berlin의 특정 클래스 구조를 타겟팅)
-      // 주의: 사이트 구조가 바뀌면 셀렉터를 수정해야 합니다.
-      const mealItems = doc.querySelectorAll('.splMeal'); 
-      
-      const scrapedData: MenuItem[] = Array.from(mealItems).map((meal, index) => {
-        const name = meal.querySelector('.splName')?.textContent?.trim() || '이름 없음';
-        const category = meal.closest('.splGroupWrapper')?.querySelector('.splGroup')?.textContent?.trim() || '기타';
-        
-        // 가격 추출 (독일식 1,45 € 형태를 1.45 숫자로 변환)
-        const priceText = meal.querySelector('.splPriceStudent')?.textContent || '0';
-        const priceNumber = parseFloat(priceText.replace('€', '').replace(',', '.').trim());
-
-        // 비건/베지테리언 여부 판단 (아이콘이나 텍스트 기준)
-        const isVegan = meal.querySelector('.icon-vegan') !== null || name.toLowerCase().includes('vegan');
-
-        return {
-          id: `scraped-${index}`,
-          name: name,
-          category: category,
-          priceStudent: priceNumber,
-          isVegan: isVegan
-        };
-      });
-
-      // 5. 결과 반영
-      setMenuData(scrapedData);
-    } catch (error) {
-      console.error("크롤링 중 에러 발생:", error);
-    } finally {
-      setLoading(false);
+    // App.tsx 내부 fetchFromMyServer 함수
+const fetchFromMyServer = async () => {
+  setLoading(true);
+  try {
+    const response = await fetch('http://localhost:4000/api/menu');
+    const data = await response.json();
+    
+    // 데이터가 잘 왔는지 콘솔에 찍어서 형식을 확인해보세요.
+    console.log("백엔드에서 받은 데이터:", data);
+    
+    // 데이터가 배열인지 확인하고 상태 업데이트
+    if (Array.isArray(data)) {
+      setMenuData(data);
+    } else {
+      setMenuData([]);
     }
-  };
-
-  fetchRealMenu();
+  } catch (e) {
+    console.error("백엔드 연결 실패:", e);
+    setMenuData([]);
+  } finally {
+    setLoading(false);
+  }
+};
+fetchFromMyServer();
 }, []);
 
   // 3. 메뉴 선택 핸들러 (중복 선택 가능)
