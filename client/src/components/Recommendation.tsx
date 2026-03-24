@@ -107,9 +107,9 @@ const Recommendation = ({ selectedItems, onRemove }: { selectedItems: MenuItem[]
           <span style={{ color: '#6b7280', fontWeight: 600 }}>총 합계</span>
           <TotalAmount>{total.toFixed(2)} €</TotalAmount>
         </PriceWrap>
-        <TipBox>
+        {/* <TipBox>
           {total === 0 ? "최고의 조합을 찾아보세요!" : total > 6 ? "💸 오늘 식사는 호화롭네요!" : "✅ 아주 훌륭한 가성비 구성입니다!"}
-        </TipBox>
+        </TipBox> */}
       </TotalSection>
     </TrayCard>
   );
