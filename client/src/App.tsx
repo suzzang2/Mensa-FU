@@ -6,6 +6,16 @@ import Recommendation from './components/Recommendation';
 import CategorySection from './components/CategorySection'; // ✨ 아코디언 로직이 담긴 컴포넌트
 import type { MenuItem } from './types/menu';
 
+const CATEGORY_TRANSLATIONS: { [key: string]: string } = {
+  'Vorspeisen': '에피타이저',
+  'Salate': '샐러드',
+  'Suppen': '스프',
+  'Aktionen': '스페셜 특선',
+  'Essen': '메인',
+  'Beilagen': '사이드',
+  'Desserts': '디저트'
+};
+
 const Container = styled.div`
   max-width: 1024px;
   margin: 0 auto;
@@ -85,7 +95,7 @@ function App() {
                 return (
                   <CategorySection 
                     key={category} 
-                    title={category} 
+                    title={CATEGORY_TRANSLATIONS[category] || category} // ✨ 번역된 이름 전달
                     items={filteredItems} 
                     onSelect={handleSelect} 
                   />
