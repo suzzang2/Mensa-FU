@@ -71,16 +71,16 @@ const TotalAmount = styled.span`
   color: #7c3aed;
 `;
 
-const TipBox = styled.div`
-  background: #f5f3ff;
-  padding: 12px;
-  border-radius: 12px;
-  color: #6d28d9;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-align: center;
-  line-height: 1.5;
-`;
+// const TipBox = styled.div`
+//   background: #f5f3ff;
+//   padding: 12px;
+//   border-radius: 12px;
+//   color: #6d28d9;
+//   font-size: 0.75rem;
+//   font-weight: 700;
+//   text-align: center;
+//   line-height: 1.5;
+// `;
 
 const Recommendation = ({ selectedItems, onRemove }: { selectedItems: MenuItem[]; onRemove: (index: number) => void }) => {
   const total = selectedItems.reduce((s, i) => s + i.priceStudent, 0);
