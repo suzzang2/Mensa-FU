@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = 4000;
+const PORT = process.env.PORT || 4000; // 포트 번호를 환경 변수에서 가져오거나 기본값으로 4000 사용
 
 app.use(cors());
 
@@ -167,6 +167,6 @@ app.get('/api/menu', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`서버가 http://localhost:${PORT} 에서 실행 중입니다!`);
+app.listen(PORT, '0.0.0.0', () => { // ✨ '0.0.0.0'을 추가하면 외부 접속이 더 원활해집니다.
+  console.log(`서버가 포트 ${PORT}에서 실행 중입니다!`);
 });
