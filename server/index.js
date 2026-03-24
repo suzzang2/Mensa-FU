@@ -78,7 +78,7 @@ const htmlContent = $(element).html();
       priceStudent: price,
       isVegan,
         nutritionIcon: nutritionLevel, 
-        co2Icon: co2Level,
+        co2Icon: co2Level === 'CO2_bewertung_D.svg' ? null : co2Level, // D등급이면 null로 처리
         h2oIcon: h2oLevel
     });
   }

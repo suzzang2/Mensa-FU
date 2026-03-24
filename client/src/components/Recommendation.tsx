@@ -1,6 +1,5 @@
 import styled from 'styled-components';
 import type { MenuItem } from '../types/menu';
-
 const TrayCard = styled.div`
   background: white;
   padding: 24px;
@@ -9,6 +8,12 @@ const TrayCard = styled.div`
   position: sticky;
   top: 24px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+  
+  /* ✨ 추가: 부모 요소의 너비를 넘지 못하게 강제 */
+  width: 100%;
+  max-width: 100%; 
+  overflow: hidden; 
+  box-sizing: border-box; /* 패딩이 너비에 포함되도록 */
 `;
 
 const ItemRow = styled.div`
@@ -18,6 +23,23 @@ const ItemRow = styled.div`
   font-size: 0.875rem;
   margin-bottom: 12px;
   color: #374151;
+  gap: 12px;
+  width: 100%; /* 부모 너비 꽉 채우기 */
+`;
+
+const ItemName = styled.span`
+  flex: 1;
+  min-width: 0;         /* 필수 */
+  white-space: nowrap;  /* 필수 */
+  overflow: hidden;     /* 필수 */
+  text-overflow: ellipsis; /* 필수 */
+  display: block;       /* span은 원래 inline이라 가끔 block이 필요할 때가 있음 */
+`;
+
+const ItemPrice = styled.span`
+  font-weight: 700;
+  flex-shrink: 0; /* 가격이 절대로 줄어들지 않게 함 */
+  white-space: nowrap;
 `;
 
 const RemoveBtn = styled.button`
@@ -25,7 +47,8 @@ const RemoveBtn = styled.button`
   border: none;
   color: #f87171;
   cursor: pointer;
-  margin-left: 8px;
+  padding: 4px;
+  flex-shrink: 0;
   &:hover { color: #ef4444; }
 `;
 
@@ -66,15 +89,18 @@ const Recommendation = ({ selectedItems, onRemove }: { selectedItems: MenuItem[]
     <TrayCard>
       <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '20px' }}>나의 트레이 🍱</h2>
       <div style={{ minHeight: '100px' }}>
-        {selectedItems.length === 0 ? <p style={{ color: '#9ca3af', fontSize: '14px' }}>메뉴를 담아보세요!</p> : 
+        {selectedItems.length === 0 ? (
+          <p style={{ color: '#9ca3af', fontSize: '14px' }}>메뉴를 담아보세요!</p>
+        ) : (
           selectedItems.map((item, i) => (
-            <ItemRow key={i}>
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
-              <span style={{ fontWeight: 700 }}>{item.priceStudent.toFixed(2)}€</span>
+            <ItemRow key={`${item.id}-${i}`}>
+              {/* ✨ span 대신 ItemName 컴포넌트를 사용하세요! */}
+              <ItemName title={item.name}>{item.name}</ItemName>
+              <ItemPrice>{item.priceStudent.toFixed(2)}€</ItemPrice>
               <RemoveBtn onClick={() => onRemove(i)}>✕</RemoveBtn>
             </ItemRow>
           ))
-        }
+        )}
       </div>
       <TotalSection>
         <PriceWrap>

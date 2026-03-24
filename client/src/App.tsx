@@ -22,6 +22,10 @@ const MainGrid = styled.main`
   }
 `;
 
+const Sidebar = styled.aside`
+  min-width: 0; /* ✨ Grid 자식이 부모를 뚫고 나가는 것을 막는 마법의 속성 */
+`;
+
 function App() {
   const [menuData, setMenuData] = useState<MenuItem[]>([]);
   const [selectedItems, setSelectedItems] = useState<MenuItem[]>([]);
@@ -89,13 +93,12 @@ function App() {
               })
             )}
           </section>
-          
-          <aside>
+          <Sidebar>
             <Recommendation 
               selectedItems={selectedItems} 
               onRemove={handleRemove} 
             />
-          </aside>
+          </Sidebar>
         </MainGrid>
       </Container>
     </>
