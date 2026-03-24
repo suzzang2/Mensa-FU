@@ -114,11 +114,10 @@ const MenuCard = ({ item, onSelect }: { item: MenuItem; onSelect: (item: MenuIte
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
           <Category>{item.category}</Category>
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-            {/* ✨ 언어 토글 버튼 */}
+            {item.isVegan && <Badge>VEGAN</Badge>}
             <LangToggleButton onClick={() => setShowOriginal(!showOriginal)}>
               {showOriginal ? '번역' : '원문보기'}
             </LangToggleButton>
-            {item.isVegan && <Badge>VEGAN</Badge>}
           </div>
         </div>
         
