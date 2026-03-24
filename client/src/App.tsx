@@ -48,7 +48,7 @@ function App() {
     const fetchFromMyServer = async () => {
       setLoading(true);
       try {
-        const response = await fetch('http://localhost:4000/api/menu');
+        const response = await fetch('https://mensa-fu.onrender.com/api/menu');
         const data = await response.json();
         if (Array.isArray(data)) {
           setMenuData(data);
