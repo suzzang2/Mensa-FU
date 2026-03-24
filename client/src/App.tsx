@@ -53,11 +53,7 @@ function App() {
   const fetchRealMenu = async () => {
     setLoading(true);
     try {
-      // 1. 타겟 URL (Mensa FU II)
-      const targetUrl = 'https://www.stw.berlin/mensen/einrichtungen/freie-universit%C3%A4t-berlin/mensa-fu-ii.html';
-
-      // 2. AllOrigins 프록시를 통해 HTML 가져오기
-      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}&timestamp=${Date.now()}`);
+      const response = await fetch('http://localhost:4000/api/menu');
       // &timestamp=${Date.now()} 를 붙이면 브라우저 캐시를 무시하고 새로 가져옵니다.
       const json = await response.json();
       const htmlString = json.contents; // 사이트의 전체 HTML 코드
