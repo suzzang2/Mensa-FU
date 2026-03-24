@@ -1,6 +1,7 @@
 export interface MenuItem {
   id: string;
   name: string;
+  originalName: string;  // ✨ 독일어 원문
   category: string; // ex: Hauptgerichte, Beilagen
   priceStudent: number;
   isVegan: boolean;

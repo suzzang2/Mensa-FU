@@ -94,8 +94,10 @@ const Recommendation = ({ selectedItems, onRemove }: { selectedItems: MenuItem[]
         ) : (
           selectedItems.map((item, i) => (
             <ItemRow key={`${item.id}-${i}`}>
-              {/* ✨ span 대신 ItemName 컴포넌트를 사용하세요! */}
-              <ItemName title={item.name}>{item.name}</ItemName>
+              {/* ✨ title 속성에 originalName을 넣어 마우스를 올리면 원문이 나오게 합니다. */}
+              <ItemName title={`원문: ${item.originalName}`}>
+                {item.name}
+              </ItemName>
               <ItemPrice>{item.priceStudent.toFixed(2)}€</ItemPrice>
               <RemoveBtn onClick={() => onRemove(i)}>✕</RemoveBtn>
             </ItemRow>

@@ -3,13 +3,39 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const cors = require('cors');
 const { translate } = require('@vitalets/google-translate-api');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const PORT = 4000;
 
 app.use(cors());
 
-// ✨ 독일어 메뉴명을 자연스러운 한국어로 다듬는 함수
+// ✨ 캐시 파일 경로 및 초기 로드 로직
+const CACHE_FILE = path.join(__dirname, 'translation-cache.json');
+let translationCache = {};
+
+// 서버 시작 시 캐시 파일이 있으면 읽어오기
+if (fs.existsSync(CACHE_FILE)) {
+  try {
+    const data = fs.readFileSync(CACHE_FILE, 'utf8');
+    translationCache = JSON.parse(data);
+    console.log('✅ 기존 번역 캐시를 성공적으로 불러왔습니다.');
+  } catch (err) {
+    console.error('❌ 캐시 파일 로드 에러:', err);
+  }
+}
+
+// ✨ 캐시 저장 함수
+const saveCache = () => {
+  try {
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(translationCache, null, 2), 'utf8');
+  } catch (err) {
+    console.error('❌ 캐시 저장 실패:', err);
+  }
+};
+
+// ✨ 번역 다듬기 함수
 const refineTranslation = (text) => {
   return text
     .replace(/와 함께/g, '를 곁들인')
@@ -19,6 +45,9 @@ const refineTranslation = (text) => {
     .replace(/유형/g, '풍')
     .trim();
 };
+
+// ✨ 대기 함수 (Rate Limit 우회용)
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 app.get('/api/menu', async (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -37,9 +66,14 @@ app.get('/api/menu', async (req, res) => {
     
     const $ = cheerio.load(data);
     const rawItems = $('.splMeal');
-    const menuPromises = [];
+    const menu = [];
 
-    rawItems.each((index, element) => {
+    console.log(`총 ${rawItems.length}개의 메뉴를 파싱 및 번역합니다...`);
+
+    // ✨ Promise.all 대신 for문으로 순차 처리
+    for (let index = 0; index < rawItems.length; index++) {
+      const element = rawItems[index];
+      
       let name = $(element).find('.col-xs-6.col-md-5 span.bold').text().trim();
       if (!name) name = $(element).find('span.bold').first().text().trim();
 
@@ -61,36 +95,74 @@ app.get('/api/menu', async (req, res) => {
       const h2oIcon = h2oMatch ? h2oMatch[0] : null;
 
       if (name && name.length > 1) {
-        // ✨ 번역 프로세스를 프로미스 배열에 담음
-        const menuPromise = (async () => {
+        // ✨ 1. 캐시에 이미 번역본이 있는지 확인
+        if (translationCache[name]) {
+          menu.push({
+            id: `meal-${index}`,
+            name: translationCache[name],
+            originalName: name,
+            category,
+            priceStudent: price,
+            isVegan,
+            nutritionIcon,
+            co2Icon,
+            h2oIcon
+          });
+        } else {
+          // ✨ 2. 캐시에 없으면 구글 번역 호출 (Delay 추가)
           try {
+            console.log(`📡 신규 번역 요청 (${index + 1}/${rawItems.length}): ${name}`);
+            
+            // 구글의 의심을 피하기 위해 0.5~0.8초 랜덤 대기
+            await delay(Math.floor(Math.random() * 300) + 500); 
+            
             const translation = await translate(name, { from: 'de', to: 'ko' });
-            return {
+            const refined = refineTranslation(translation.text);
+            
+            // 캐시에 저장 및 파일 업데이트
+            translationCache[name] = refined;
+            saveCache(); 
+
+            menu.push({
               id: `meal-${index}`,
-              name: refineTranslation(translation.text), // 자연스러운 번역 처리
-              originalName: name, // 원문도 함께 보냄 (디버깅용)
+              name: refined,
+              originalName: name,
               category,
               priceStudent: price,
               isVegan,
               nutritionIcon,
               co2Icon,
               h2oIcon
-            };
+            });
           } catch (err) {
-            return { id: `meal-${index}`, name, category, priceStudent: price, isVegan, nutritionIcon, co2Icon, h2oIcon };
+            console.error(`❌ 번역 실패 (${name}):`, err.message);
+            // 번역 실패 시 원문을 넣음
+            menu.push({ 
+              id: `meal-${index}`, 
+              name: name, 
+              originalName: name, 
+              category, 
+              priceStudent: price, 
+              isVegan, 
+              nutritionIcon, 
+              co2Icon, 
+              h2oIcon 
+            });
+            
+            // ✨ 에러(429 등) 발생 시 더 길게(5초) 휴식
+            if (err.message.includes('429')) {
+              console.log('⚠️ 429 에러 감지: 5초간 대기합니다...');
+              await delay(5000);
+            }
           }
-        })();
-        menuPromises.push(menuPromise);
+        }
       }
-    });
+    }
 
-    // ✨ 모든 메뉴 번역이 완료될 때까지 기다림
-    const menu = await Promise.all(menuPromises);
-    console.log(`성공적으로 ${menu.length}개의 메뉴를 번역 및 파싱했습니다.`);
-
+    console.log('✅ 모든 처리가 완료되었습니다.');
     res.json(menu);
   } catch (error) {
-    console.error('Scraping/Translation Error:', error.message);
+    console.error('Scraping Error:', error.message);
     res.status(500).json({ error: '서버 에러 발생' });
   }
 });

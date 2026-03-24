@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 import type { MenuItem } from '../types/menu';
+import { useState } from 'react';
 
 const Card = styled.div`
   background: white;
@@ -11,6 +12,12 @@ const Card = styled.div`
   justify-content: space-between;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   transition: all 0.2s ease-in-out;
+
+  /* ✨ 추가된 부분: 카드가 부모(Grid) 너비를 넘지 못하게 꽉 묶어줍니다. */
+  width: 100%;
+  max-width: 100%;
+  min-width: 0; 
+  box-sizing: border-box;
 
   &:hover {
     transform: translateY(-5px);
@@ -42,6 +49,10 @@ const FoodName = styled.h3`
   font-weight: 700;
   line-height: 1.4;
   margin: 8px 0 16px;
+
+  /* ✨ 추가된 부분: 글자 줄바꿈 규칙 설정 */
+  word-break: keep-all;      /* 한국어는 띄어쓰기(단어) 단위로 예쁘게 줄바꿈 */
+  overflow-wrap: break-word; /* 엄청 긴 독일어 단어가 박스를 뚫으려 하면 강제로 줄바꿈 */
 `;
 
 const PriceTag = styled.span`
@@ -76,31 +87,58 @@ const AddButton = styled.button`
     object-fit: contain;
   `;
 
-const MenuCard = ({ item, onSelect }: { item: MenuItem; onSelect: (item: MenuItem) => void }) => (
-  <Card>
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <Category>{item.category}</Category>
-        {item.isVegan && <Badge>VEGAN</Badge>}
-      </div>
-    <IconGroup>
-      {item.nutritionIcon && (
-        <BadgeIcon src={`/assets/icons/${item.nutritionIcon}`} alt="Nutrition" /> 
-      )}
-      {item.co2Icon && (
-        <BadgeIcon src={`/assets/icons/${item.co2Icon}`} alt="CO2" />
-      )}
-      {item.h2oIcon && (
-        <BadgeIcon src={`/assets/icons/${item.h2oIcon}`} alt="H2O" />
-      )}
-    </IconGroup>
-      <FoodName>{item.name}</FoodName>
-    </div>
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <PriceTag>{item.priceStudent.toFixed(2)} €</PriceTag>
-      <AddButton onClick={() => onSelect(item)}>담기</AddButton>
-    </div>
-  </Card>
-);
+  const LangToggleButton = styled.button`
+  //badge랑 사이즈 통일
+  background: #f3f4f6;
+  color: #374151;
+  padding: 6px 8px;
+  /* border-radius: 999px; */
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+  &:hover {
+    background: #e5e7eb;
+    color: #374151;
+  }
+`;
 
+const MenuCard = ({ item, onSelect }: { item: MenuItem; onSelect: (item: MenuItem) => void }) => {
+  // ✨ 원문 보기 상태 관리
+  const [showOriginal, setShowOriginal] = useState(false);
+
+  return (
+    <Card>
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <Category>{item.category}</Category>
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+            {/* ✨ 언어 토글 버튼 */}
+            <LangToggleButton onClick={() => setShowOriginal(!showOriginal)}>
+              {showOriginal ? '번역' : '원문보기'}
+            </LangToggleButton>
+            {item.isVegan && <Badge>VEGAN</Badge>}
+          </div>
+        </div>
+        
+        <IconGroup>
+          {item.nutritionIcon && <BadgeIcon src={`/assets/icons/${item.nutritionIcon}`} alt="Nutrition" />}
+          {item.co2Icon && <BadgeIcon src={`/assets/icons/${item.co2Icon}`} alt="CO2" />}
+          {item.h2oIcon && <BadgeIcon src={`/assets/icons/${item.h2oIcon}`} alt="H2O" />}
+        </IconGroup>
+
+        {/* ✨ 상태에 따라 다른 이름 보여주기 */}
+        <FoodName>
+          {showOriginal ? item.originalName : item.name}
+        </FoodName>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <PriceTag>{item.priceStudent.toFixed(2)} €</PriceTag>
+        <AddButton onClick={() => onSelect(item)}>담기</AddButton>
+      </div>
+    </Card>
+  );
+};
 export default MenuCard;
