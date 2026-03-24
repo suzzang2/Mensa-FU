@@ -64,6 +64,18 @@ const AddButton = styled.button`
   &:hover { background: #7c3aed; }
 `;
 
+  const IconGroup = styled.div`
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    align-items: center;
+  `;
+
+  const BadgeIcon = styled.img`
+    height: 20px; // 카드 크기에 맞춰 조절하세요
+    object-fit: contain;
+  `;
+
 const MenuCard = ({ item, onSelect }: { item: MenuItem; onSelect: (item: MenuItem) => void }) => (
   <Card>
     <div>
@@ -71,6 +83,17 @@ const MenuCard = ({ item, onSelect }: { item: MenuItem; onSelect: (item: MenuIte
         <Category>{item.category}</Category>
         {item.isVegan && <Badge>VEGAN</Badge>}
       </div>
+    <IconGroup>
+      {item.nutritionIcon && (
+        <BadgeIcon src={`/assets/icons/${item.nutritionIcon}`} alt="Nutrition" /> 
+      )}
+      {item.co2Icon && (
+        <BadgeIcon src={`/assets/icons/${item.co2Icon}`} alt="CO2" />
+      )}
+      {item.h2oIcon && (
+        <BadgeIcon src={`/assets/icons/${item.h2oIcon}`} alt="H2O" />
+      )}
+    </IconGroup>
       <FoodName>{item.name}</FoodName>
     </div>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

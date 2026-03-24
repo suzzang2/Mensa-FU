@@ -54,8 +54,21 @@ items.each((index, element) => {
   const isVegan = $(element).find('img[src*="15.png"]').length > 0 || 
                    name.toLowerCase().includes('vegan');
 
+const htmlContent = $(element).html();
+// 1. 영양 신호등 파일명 추출 (예: ampel_gruen_70x65.png)
+  const ampelMatch = htmlContent.match(/ampel_[^"']+/);
+  const nutritionLevel = ampelMatch ? ampelMatch[0] : null;
+
+  // 2. CO2 등급 파일명 추출 (예: CO2_bewertung_A.svg)
+  const co2Match = htmlContent.match(/CO2_bewertung_[A-D]\.svg/);
+  const co2Level = co2Match ? co2Match[0] : null;
+
+  // 3. H2O 등급 파일명 추출 (예: H2O_bewertung_A.svg)
+  const h2oMatch = htmlContent.match(/H2O_bewertung_[A-C]\.svg/);
+  const h2oLevel = h2oMatch ? h2oMatch[0] : null;
+
   // 디버깅 로그 (이제 이름이 잘 찍힐 겁니다!)
-  console.log(`[메뉴 ${index}] 이름: ${name || '실패'}, 가격: ${price}, 비건: ${isVegan}`);
+  console.log(`[메뉴 ${index}] 이름: ${name || '실패'}, 가격: ${price}, 비건: ${isVegan}`, `영양: ${nutritionLevel || '없음'}`, `CO2: ${co2Level || '없음'}`, `H2O: ${h2oLevel || '없음'}`);
 
   if (name && name.length > 1) {
     menu.push({
@@ -63,7 +76,10 @@ items.each((index, element) => {
       name,
       category,
       priceStudent: price,
-      isVegan
+      isVegan,
+        nutritionIcon: nutritionLevel, 
+        co2Icon: co2Level,
+        h2oIcon: h2oLevel
     });
   }
 });

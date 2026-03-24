@@ -32,7 +32,7 @@ const Header = () => {
 
   return (
     <StyledHeader>
-      <Title>🍴 FU Berlin Mensa II 가이드</Title>
+      <Title>🍴 FU Berlin Mensa II</Title>
       <DateText>{today}</DateText>
       <Underline />
     </StyledHeader>
