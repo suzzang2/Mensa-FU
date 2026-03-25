@@ -5,6 +5,7 @@ import Header from './components/Header';
 import Recommendation from './components/Recommendation';
 import CategorySection from './components/CategorySection'; // ✨ 아코디언 로직이 담긴 컴포넌트
 import type { MenuItem } from './types/menu';
+import Footer from './components/Footer';
 
 const API_URL = import.meta.env.PROD 
   ? 'https://mensa-fu.onrender.com/api/menu' // 배포 환경 (Render 주소)
@@ -144,6 +145,7 @@ function App() {
           </Sidebar>
         </MainGrid>
       </Container>
+      <Footer />
     </>
   );
 }
