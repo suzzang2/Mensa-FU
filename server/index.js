@@ -1,106 +1,93 @@
+require('dotenv').config();
+
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const cors = require('cors');
-const { translate } = require('@vitalets/google-translate-api');
+
+// ✨ DeepL 패키지 설정
+const deepl = require('deepl-node');
+const authKey = process.env.DEEPL_AUTH_KEY;
+const translator = new deepl.Translator(authKey);
+
 const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 4000; // 포트 번호를 환경 변수에서 가져오거나 기본값으로 4000 사용
+const PORT = process.env.PORT || 4000;
 
 app.use(cors());
 
-// ✨ 캐시 파일 경로 및 초기 로드 로직
+// 캐시 설정
 const CACHE_FILE = path.join(__dirname, 'translation-cache.json');
 let translationCache = {};
-
-// 서버 시작 시 캐시 파일이 있으면 읽어오기
 if (fs.existsSync(CACHE_FILE)) {
   try {
-    const data = fs.readFileSync(CACHE_FILE, 'utf8');
-    translationCache = JSON.parse(data);
-    console.log('✅ 기존 번역 캐시를 성공적으로 불러왔습니다.');
-  } catch (err) {
-    console.error('❌ 캐시 파일 로드 에러:', err);
-  }
+    translationCache = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'));
+  } catch (err) { console.error('캐시 로드 에러:', err); }
 }
-
-// ✨ 캐시 저장 함수
 const saveCache = () => {
-  try {
-    fs.writeFileSync(CACHE_FILE, JSON.stringify(translationCache, null, 2), 'utf8');
-  } catch (err) {
-    console.error('❌ 캐시 저장 실패:', err);
-  }
+  fs.writeFileSync(CACHE_FILE, JSON.stringify(translationCache, null, 2), 'utf8');
 };
 
-// ✨ 번역 다듬기 함수
 const refineTranslation = (text) => {
-  return text
-    .replace(/와 함께/g, '를 곁들인')
-    .replace(/소스와 함께/g, '소스를 끼얹은')
-    .replace(/에/g, '를 넣은')
-    .replace(/스타일/g, '식')
-    .replace(/유형/g, '풍')
-    .trim();
+  return text.replace(/와 함께/g, '를 곁들인').replace(/소스와 함께/g, '소스를 끼얹은').trim();
 };
 
-// ✨ 대기 함수 (Rate Limit 우회용)
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
+// API 엔드포인트: 파라미터 없이 무조건 "오늘" 데이터만 가져오기
 app.get('/api/menu', async (req, res) => {
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-
   try {
-    const targetUrl = 'https://www.stw.berlin/mensen/einrichtungen/freie-universit%C3%A4t-berlin/mensa-fu-ii.html';
-    
-    const { data } = await axios.get(targetUrl, {
-      headers: { 
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7'
+    console.log('📡 오늘 하루 치 메뉴 수집 시작...');
+
+    const params = new URLSearchParams();
+    params.append('resources_id', '322'); 
+
+    const targetUrl = 'https://www.stw.berlin/xhr/speiseplan-wochentag.html';
+    const { data } = await axios.post(targetUrl, params.toString(), {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-Requested-With': 'XMLHttpRequest',
+        'User-Agent': 'Mozilla/5.0'
       }
     });
-    
+
     const $ = cheerio.load(data);
     const rawItems = $('.splMeal');
-    const menu = [];
+    
+    // ✨ 1단계: 번역이 필요한 새로운 메뉴들만 모아둘 배열 만들기
+    const textsToTranslate = [];
+    const parsedItems = []; // 파싱된 원본 데이터를 임시 저장
 
-    console.log(`총 ${rawItems.length}개의 메뉴를 파싱 및 번역합니다...`);
+    if (rawItems.length > 0) {
+      for (let index = 0; index < rawItems.length; index++) {
+        const element = rawItems[index];
+        let name = $(element).find('.col-xs-6.col-md-5 span.bold').text().trim();
+        if (!name) name = $(element).find('span.bold').first().text().trim();
 
-    // ✨ Promise.all 대신 for문으로 순차 처리
-    for (let index = 0; index < rawItems.length; index++) {
-      const element = rawItems[index];
-      
-      let name = $(element).find('.col-xs-6.col-md-5 span.bold').text().trim();
-      if (!name) name = $(element).find('span.bold').first().text().trim();
+        const category = $(element).closest('.splGroupWrapper').find('.splGroup').text().trim() || 'Speisen';
+        const priceRaw = $(element).find('.text-right').text().trim();
+        const studentPriceMatch = priceRaw.match(/\d+[.,]\d+/);
+        const price = studentPriceMatch ? parseFloat(studentPriceMatch[0].replace(',', '.')) : 0;
 
-      const category = $(element).closest('.splGroupWrapper').find('.splGroup').text().trim() || 'Speisen';
-      const priceRaw = $(element).find('.text-right').text().trim();
-      const studentPriceMatch = priceRaw.match(/\d+[.,]\d+/);
-      const price = studentPriceMatch ? parseFloat(studentPriceMatch[0].replace(',', '.')) : 0;
+        const htmlContent = $(element).html();
+        const isVegan = htmlContent.includes('15.png') || name.toLowerCase().includes('vegan');
+        
+        const ampelMatch = htmlContent.match(/ampel_[^"']+/);
+        const nutritionIcon = ampelMatch ? ampelMatch[0] : null;
+        const co2Match = htmlContent.match(/CO2_bewertung_[A-D]\.svg/);
+        const co2Icon = co2Match && co2Match[0] !== 'CO2_bewertung_D.svg' ? co2Match[0] : null;
+        const h2oMatch = htmlContent.match(/H2O_bewertung_[A-C]\.svg/);
+        const h2oIcon = h2oMatch ? h2oMatch[0] : null;
 
-      const htmlContent = $(element).html();
-      const isVegan = htmlContent.includes('15.png') || name.toLowerCase().includes('vegan');
+        if (name && name.length > 1) {
+          // 캐시에 없는 단어라면 번역 대기열 배열에 추가!
+          if (!translationCache[name] && !textsToTranslate.includes(name)) {
+            textsToTranslate.push(name);
+          }
 
-      const ampelMatch = htmlContent.match(/ampel_[^"']+/);
-      const nutritionIcon = ampelMatch ? ampelMatch[0] : null;
-
-      const co2Match = htmlContent.match(/CO2_bewertung_[A-D]\.svg/);
-      const co2Icon = co2Match && co2Match[0] !== 'CO2_bewertung_D.svg' ? co2Match[0] : null;
-
-      const h2oMatch = htmlContent.match(/H2O_bewertung_[A-C]\.svg/);
-      const h2oIcon = h2oMatch ? h2oMatch[0] : null;
-
-      if (name && name.length > 1) {
-        // ✨ 1. 캐시에 이미 번역본이 있는지 확인
-        if (translationCache[name]) {
-          menu.push({
-            id: `meal-${index}`,
-            name: translationCache[name],
-            originalName: name,
+          parsedItems.push({
+            id: `meal-today-${index}`, 
+            originalName: name, // 원본 독일어
             category,
             priceStudent: price,
             isVegan,
@@ -108,65 +95,48 @@ app.get('/api/menu', async (req, res) => {
             co2Icon,
             h2oIcon
           });
-        } else {
-          // ✨ 2. 캐시에 없으면 구글 번역 호출 (Delay 추가)
-          try {
-            console.log(`📡 신규 번역 요청 (${index + 1}/${rawItems.length}): ${name}`);
-            
-            // 구글의 의심을 피하기 위해 0.5~0.8초 랜덤 대기
-            await delay(Math.floor(Math.random() * 300) + 500); 
-            
-            const translation = await translate(name, { from: 'de', to: 'ko' });
-            const refined = refineTranslation(translation.text);
-            
-            // 캐시에 저장 및 파일 업데이트
-            translationCache[name] = refined;
-            saveCache(); 
-
-            menu.push({
-              id: `meal-${index}`,
-              name: refined,
-              originalName: name,
-              category,
-              priceStudent: price,
-              isVegan,
-              nutritionIcon,
-              co2Icon,
-              h2oIcon
-            });
-          } catch (err) {
-            console.error(`❌ 번역 실패 (${name}):`, err.message);
-            // 번역 실패 시 원문을 넣음
-            menu.push({ 
-              id: `meal-${index}`, 
-              name: name, 
-              originalName: name, 
-              category, 
-              priceStudent: price, 
-              isVegan, 
-              nutritionIcon, 
-              co2Icon, 
-              h2oIcon 
-            });
-            
-            // ✨ 에러(429 등) 발생 시 더 길게(5초) 휴식
-            if (err.message.includes('429')) {
-              console.log('⚠️ 429 에러 감지: 5초간 대기합니다...');
-              await delay(5000);
-            }
-          }
         }
       }
     }
 
-    console.log('✅ 모든 처리가 완료되었습니다.');
-    res.json(menu);
+    // ✨ 2단계: 번역 대기열에 모인 단어들을 "한 번에" 통째로 DeepL에 보내기
+    if (textsToTranslate.length > 0) {
+      console.log(`🚀 DeepL 대량 번역 요청 중... (총 ${textsToTranslate.length}개)`);
+      try {
+        // 배열을 통째로 보내면 DeepL이 배열로 돌려줍니다.
+        const results = await translator.translateText(textsToTranslate, 'de', 'ko');
+        const translatedArray = Array.isArray(results) ? results : [results];
+
+        // 받아온 번역 결과를 캐시에 한꺼번에 저장
+        textsToTranslate.forEach((originalText, idx) => {
+          translationCache[originalText] = refineTranslation(translatedArray[idx].text);
+        });
+        saveCache();
+        console.log('✅ 대량 번역 완료 및 캐시 저장 성공!');
+      } catch (err) {
+        console.error('❌ DeepL 대량 번역 실패:', err.message);
+      }
+    }
+
+    // ✨ 3단계: 완성된 캐시를 바탕으로 최종 프론트엔드용 배열 완성하기
+    const dayMenu = parsedItems.map(item => {
+      return {
+        ...item,
+        // 캐시에 있으면 한국어, 없으면(에러 났으면) 원래 독일어
+        name: translationCache[item.originalName] || item.originalName 
+      };
+    });
+
+    console.log('✅ 오늘 치 메뉴 수집 완료!');
+    res.json(dayMenu); 
+
   } catch (error) {
     console.error('Scraping Error:', error.message);
     res.status(500).json({ error: '서버 에러 발생' });
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => { // ✨ '0.0.0.0'을 추가하면 외부 접속이 더 원활해집니다.
+
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`서버가 포트 ${PORT}에서 실행 중입니다!`);
 });

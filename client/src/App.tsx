@@ -6,6 +6,10 @@ import Recommendation from './components/Recommendation';
 import CategorySection from './components/CategorySection'; // ✨ 아코디언 로직이 담긴 컴포넌트
 import type { MenuItem } from './types/menu';
 
+const API_URL = import.meta.env.PROD 
+  ? 'https://mensa-fu.onrender.com/api/menu' // 배포 환경 (Render 주소)
+  : 'http://localhost:4000/api/menu';      // 로컬 개발 환경
+
 const CATEGORY_TRANSLATIONS: { [key: string]: string } = {
   'Vorspeisen': '에피타이저',
   'Salate': '샐러드',
@@ -40,6 +44,7 @@ function App() {
   const [menuData, setMenuData] = useState<MenuItem[]>([]);
   const [selectedItems, setSelectedItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   // 카테고리 순서 정의
   const categories = ['Vorspeisen', 'Salate', 'Suppen', 'Aktionen', 'Essen', 'Beilagen', 'Desserts'];
@@ -48,8 +53,9 @@ function App() {
     const fetchFromMyServer = async () => {
       setLoading(true);
       try {
-        const response = await fetch('https://mensa-fu.onrender.com/api/menu');
-        const data = await response.json();
+      // ✨ API 호출 시 날짜 쿼리 전달
+      const response = await fetch(`${API_URL}?date=${selectedDate}`);
+      const data = await response.json();
         if (Array.isArray(data)) {
           setMenuData(data);
         }
@@ -60,7 +66,7 @@ function App() {
       }
     };
     fetchFromMyServer();
-  }, []);
+  }, [selectedDate]);
 
   const handleSelect = (item: MenuItem) => {
     setSelectedItems((prev) => [...prev, item]);
