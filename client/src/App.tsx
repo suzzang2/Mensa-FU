@@ -44,7 +44,6 @@ function App() {
   const [menuData, setMenuData] = useState<MenuItem[]>([]);
   const [selectedItems, setSelectedItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   // 카테고리 순서 정의
   const categories = ['Vorspeisen', 'Salate', 'Suppen', 'Aktionen', 'Essen', 'Beilagen', 'Desserts'];
@@ -53,8 +52,8 @@ function App() {
     const fetchFromMyServer = async () => {
       setLoading(true);
       try {
-      // ✨ API 호출 시 날짜 쿼리 전달
-      const response = await fetch(`${API_URL}?date=${selectedDate}`);
+    // ✨ API 호출 시 날짜 쿼리 전달
+      const response = await fetch(`${API_URL}`);
       const data = await response.json();
         if (Array.isArray(data)) {
           setMenuData(data);
@@ -66,7 +65,7 @@ function App() {
       }
     };
     fetchFromMyServer();
-  }, [selectedDate]);
+  }, []);
 
   const handleSelect = (item: MenuItem) => {
     setSelectedItems((prev) => [...prev, item]);
