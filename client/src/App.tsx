@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { GlobalStyle } from './GlobalStyle';
 import Header from './components/Header';
 import Recommendation from './components/Recommendation';
@@ -19,6 +19,32 @@ const CATEGORY_TRANSLATIONS: { [key: string]: string } = {
   'Beilagen': '사이드',
   'Desserts': '디저트'
 };
+
+///styled-components 스타일 정의
+const float = keyframes`
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); } /* 위로 10px 이동 */
+  100% { transform: translateY(0px); }
+`;
+const LoadingWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+  animation: ${float} 2s ease-in-out infinite; /* 2초 간격으로 무한 반복 */
+
+  p {
+    font-size: 1rem;
+    color: #6b7280;
+    margin-top: 12px;
+    font-weight: 500;
+  }
+
+  .icon {
+    font-size: 2.5rem;
+  }
+`;
 
 const Container = styled.div`
   max-width: 1024px;
@@ -82,14 +108,16 @@ function App() {
         <Header />
         <MainGrid>
           <section>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '32px' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '30px' }}>
               오늘의 메뉴
             </h2>
+            <span style={{ fontSize:'0.8rem', color: '#787878' }}>*모든 가격은 학생가 기준입니다.</span>
             
             {loading ? (
-              <p style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
-                메뉴를 불러오는 중... 🍛
-              </p>
+              <LoadingWrapper>
+                <div className="icon">🍛</div>
+                <p>메뉴를 불러오고 있어요...</p>
+              </LoadingWrapper>
             ) : (
               // ✨ 핵심 수정 부분: CategorySection을 단일 태그로 사용
               categories.map((category) => {
